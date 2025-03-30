@@ -14,6 +14,72 @@ model User {
   imageUrl     String?
   firstName    String?
   lastName     String?
+  
   emailAddress String   @unique
+
   credit       Int      @default(150)
+
+  userToProjects UserToProject[]
+}
+
+
+model Project {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  name          String
+  githubUrl     String
+
+  deletedAt      DateTime?
+
+  userToProjects UserToProject[]
+  commits       Commit[]
+  sourceCodeEmbeddings SourceCodeEmbedding[]
+}
+
+model SourceCodeEmbedding{
+   id           String   @id @default(cuid())
+
+   // Using a regular String for now until vector support is properly configured
+   // summaryEmbedding UnSupported("vector(768)")?
+   summaryEmbedding String?
+   sourceCode String
+   fileName String
+   summary String
+
+   projectId String
+   project Project @relation(fields: [projectId], references: [id])
+}
+
+model UserToProject{
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId String
+  projectId String
+
+  user User @relation(fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@unique([userId, projectId])
+}
+
+model Commit {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  projectId String
+  project Project @relation(fields: [projectId], references: [id])
+
+  commitmessage String
+  commitHash    String
+  commitAuthorName String
+  commitAuthorAvatar String
+  commitDate DateTime
+  //ai summary
+  summary String
+
 }
