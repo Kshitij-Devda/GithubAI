@@ -10,7 +10,8 @@ import Image from 'next/image'
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { askQuestion } from './action'
 import { readStreamableValue } from 'ai/rsc'
-import MDEditor from '@uiw/react-md-editor'     
+import MDEditor from '@uiw/react-md-editor'    
+import CodeReferences from './code-references'
 
 const AskQuestionCard = () => {
     const {project} = useProject()
@@ -48,6 +49,9 @@ const AskQuestionCard = () => {
         </DialogTitle>
     </DialogHeader>
     <MDEditor.Markdown source={answer} className='max-w-{70vw} !h-full max-h-[70vh] overflow-y-auto' />
+    <div className="h-4"></div>
+    <CodeReferences fileReference={fileReference} />
+    
     <h1>File References</h1>
     {fileReference.map(file=>{
         return<span>{file.fileName}</span>
