@@ -26,8 +26,21 @@ import { db } from "@/server/db";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+  const { auth: getAuth } = await import("@clerk/nextjs/server");
+  const session = await getAuth();
+  
+  // Make sure we're actually getting a proper user ID
+  const userId = session?.userId || null;
+  
+  if (userId) {
+    console.log("User authenticated:", userId);
+  } else {
+    console.log("No authenticated user found");
+  }
+
   return {
     db,
+    userId,
     ...opts,
   };
 };
@@ -81,37 +94,30 @@ export const createTRPCRouter = t.router;
  * network latency that would occur in production but not in local development.
  */
 
-
-const isAuthenticated = t.middleware(async({ next, ctx }) => {
-  const user = await auth()
-  if(!user){
+const isAuthenticated = t.middleware(({ next, ctx }) => {
+  if (!ctx.userId) {
     throw new TRPCError({
-      code:'UNAUTHORIZED',
-      message :'You must logged in to access this resource'
-    })
+      code: "UNAUTHORIZED",
+      message: "You must be logged in to access this resource. Please sign in and try again.",
+    });
   }
+
+  // Check if the user exists in our database
+  // This serves as verification that the authenticated user has a record in our database
   return next({
-    ctx:{
+    ctx: {
       ...ctx,
-      user
-    }
-  })
-})
+      // We know the userId is non-null at this point
+      userId: ctx.userId,
+    },
+  });
+});
 
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
-
-  if (t._config.isDev) {
-    // artificial delay in dev
-    const waitMs = Math.floor(Math.random() * 400) + 100;
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
-  }
-
   const result = await next();
-
   const end = Date.now();
   console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
-
   return result;
 });
 
@@ -123,4 +129,4 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
  * are logged in.
  */
 export const publicProcedure = t.procedure.use(timingMiddleware);
-export const protectedProcedure = t.procedure.use(isAuthenticated)
+export const protectedProcedure = t.procedure.use(isAuthenticated).use(timingMiddleware);

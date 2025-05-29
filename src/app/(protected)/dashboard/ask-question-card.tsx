@@ -12,6 +12,9 @@ import { askQuestion } from './action'
 import { readStreamableValue } from 'ai/rsc'
 import MDEditor from '@uiw/react-md-editor'    
 import CodeReferences from './code-references'
+import { api } from '@/trpc/react'
+import { toast } from 'sonner'
+import useRefetch from '@/hooks/use-refetch'
 
 const AskQuestionCard = () => {
     const {project} = useProject()
@@ -20,6 +23,7 @@ const AskQuestionCard = () => {
     const [loading, setLoading] = React.useState(false)
     const [fileReference, setFileReference] = React.useState<{ fileName : string, sourceCode :string, summary :string}[]>([])
     const [answer, setAnswer] = React.useState('')
+  const  saveAnswer = api.project.saveAnswer.useMutation()
 
     const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -38,27 +42,57 @@ const AskQuestionCard = () => {
         setLoading(false)
     }
 
+    const refetch = useRefetch()
+
   return (
    <>
    <Dialog open={open} onOpenChange={setOpen}>
-  
-   <DialogContent className='sm-max-w-[80vw] '>
+   <DialogContent className='sm:max-w-[90vw] md:max-w-[80vw] lg:max-w-[70vw] max-h-[90vh] overflow-hidden p-4'>
    <DialogHeader>
+    <div className="flex items-center gap-2">
         <DialogTitle>
             <Image src='/github.png' alt='logo' width={40} height={40} />
         </DialogTitle>
+      <Button disabled={saveAnswer.isPending} variant={'outline'}  onClick={()=>{
+        saveAnswer.mutate({
+            projectId: project!.id,
+            question,
+            answer,
+            fileReference
+        }, {
+            onSuccess: () => {
+                toast.success('Answer saved!')
+                refetch()
+            }, 
+            onError: (error) => {
+                toast.error('Error saving answer')
+            }
+        })
+      }}>
+        Save Answer
+      </Button>
+      </div>
     </DialogHeader>
-    <MDEditor.Markdown source={answer} className='max-w-{70vw} !h-full max-h-[70vh] overflow-y-auto' />
+
+    <div className="w-full overflow-y-auto overflow-x-hidden max-h-[40vh]">
+      <MDEditor.Markdown 
+        source={answer} 
+        className='w-full break-words whitespace-pre-wrap overflow-hidden' 
+      />
+    </div>
     <div className="h-4"></div>
     <CodeReferences fileReference={fileReference} />
     
-    <h1>File References</h1>
-    {fileReference.map(file=>{
-        return<span>{file.fileName}</span>
-    })}
+  <Button type='button' onClick={()=>{ setOpen(false)}}>
+    Close
+  </Button>
+  
    </DialogContent>
    </Dialog>
-   <Card className='relative col-span-3'>
+   
+
+
+   <Card className='relative col-span-2'>
     <CardHeader>
         <CardTitle>Ask a Question</CardTitle>
     </CardHeader>

@@ -30,12 +30,9 @@ export const indexGithubRepo = async (project: string, githubUrl: string, github
                 sourceCode: embedding.sourceCode,
                 fileName: embedding.fileName,
                 projectId: project,
+                summaryEmbedding: JSON.stringify(embedding.embedding)
             }
         })
-        await db.$executeRaw
-        `UPDATE SourceCodeEmbedding SET summaryEmbedding = ${embedding.embedding}::vector
-            WHERE id = ${sourceCodeEmbedding.id}
-        `
     }))
 }
 

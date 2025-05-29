@@ -1,7 +1,15 @@
+'use client'
+
 import { SidebarProvider } from '@/components/ui/sidebar'
-import { UserButton } from '@clerk/nextjs'
+import dynamic from 'next/dynamic'
 import React from 'react'
 import { AppSidebar } from './app-sidebar'
+
+// Use dynamic import with SSR disabled for client-only components
+const UserButton = dynamic(
+  () => import('@clerk/nextjs').then((mod) => mod.UserButton),
+  { ssr: false }
+)
 
 type Props = {
     children:React.ReactNode

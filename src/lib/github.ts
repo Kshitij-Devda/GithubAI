@@ -72,7 +72,7 @@ export const pollCommits = async(projectId : string) =>{
                 return {
                     projectId: projectId,
                     commitHash: unprocessedCommits[index]!.commitHash,
-                    commitmessage: unprocessedCommits[index]!.commitMessage,
+                    commitMessage: unprocessedCommits[index]!.commitMessage,
                     commitAuthorName: unprocessedCommits[index]!.commitAuthorName,
                     commitAuthorAvatar: unprocessedCommits[index]!.commitAuthorAvatar,
                     commitDate: new Date(unprocessedCommits[index]!.commitDate),

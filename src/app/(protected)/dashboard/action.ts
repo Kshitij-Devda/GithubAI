@@ -17,26 +17,48 @@ const stream = createStreamableValue()
 
 
 const queryvector = await generateEmbeddings(question)
-const vectorQuery = `[${queryvector},join(',')]`
+if (!Array.isArray(queryvector)) {
+    throw new Error("Failed to generate embeddings - not an array");
+}
 
-const result = await db.$queryRaw`
-SELECT "fileName", "sourceCode", "summary"
-1 - ("summaryEmbedding" <=> ${vectorQuery}) :: vector AS similarity
-FROM "SourceCodeEmbedding"
-WHERE 1 - ("summaryEmbedding" <=> ${vectorQuery}) :: vector > .5
-AND "projectId" = ${projectId}
-ORDER BY similarity DESC
-LIMIT 10
-` as {
-    fileName: string
-    sourceCode: string
-    summary: string
-    similarity: number
+// For debugging
+console.log("Generated embeddings of length:", queryvector.length);
+
+try {
+    // First get all embeddings for the project
+    const result = await db.$queryRaw`
+    SELECT "id", "fileName", "sourceCode", "summary", "summaryEmbedding"
+    FROM "SourceCodeEmbedding"
+    WHERE "projectId" = ${projectId}
+    ` as {
+        id: string
+        fileName: string
+        sourceCode: string
+        summary: string
+        summaryEmbedding: string | null
     }[]
+
+    // Calculate similarity manually for each result (simplified version)
+    const resultsWithSimilarity = result
+        .map(item => {
+            let similarity = 0;
+            if (item.summaryEmbedding) {
+                try {
+                    const embeddings = JSON.parse(item.summaryEmbedding);
+                    // Simple dot product similarity (not as good as cosine but works for demo)
+                    similarity = calculateSimilarity(queryvector, embeddings);
+                } catch (e) {
+                    console.error("Error parsing embeddings:", e);
+                }
+            }
+            return { ...item, similarity };
+        })
+        .sort((a, b) => b.similarity - a.similarity) // Sort by similarity desc
+        .slice(0, 10); // Take top 10
 
     let context = ''
 
-    for (const docs of result) {
+    for (const docs of resultsWithSimilarity) {
         context += `
         source: ${docs.fileName}\ncode 
         content: ${docs.sourceCode}\n
@@ -70,7 +92,29 @@ LIMIT 10
     })()
 
     return {
-        output :stream.value,
-        fileReference: result
+        output: stream.value,
+        fileReference: resultsWithSimilarity.map(({ id, summaryEmbedding, ...rest }) => rest) // Remove embeddings from response
     }
+} catch (error) {
+    console.error("Error fetching context:", error);
+    throw error;
+}
+}
+
+// Simple dot product similarity function
+function calculateSimilarity(vec1: number[], vec2: number[]): number {
+    // Validate inputs
+    if (!vec1 || !vec2 || vec1.length !== vec2.length) return 0;
+    
+    let dotProduct = 0;
+    const length = Math.min(vec1.length, vec2.length);
+    
+    for (let i = 0; i < length; i++) {
+        // Using nullish coalescing to handle undefined values
+        const v1 = vec1[i] ?? 0;
+        const v2 = vec2[i] ?? 0;
+        dotProduct += v1 * v2;
+    }
+    
+    return dotProduct;
 }

@@ -1,14 +1,12 @@
 'use client'
 
 import { SidebarContent,Sidebar, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
-import { CreditCard, Presentation} from "lucide-react"
-import { Bot, LayoutDashboard } from "lucide-react"
+import { CreditCard, Presentation, Bot, LayoutDashboard, Plus } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import path from "path"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
 import Image from "next/image"
 import useProject from "@/hooks/use-project"
 
@@ -31,8 +29,8 @@ const items = [
         icon: Presentation,
     },
     {
-        title: "Billing",
-        url:'/billing',
+        title: "Credits",
+        url:'/credits',
         icon: CreditCard,
     },
 ]
@@ -87,10 +85,10 @@ export function AppSidebar(){
                         <SidebarMenu>
                             {projects?.map(project =>{
                                 return(
-                                    <SidebarMenuItem key={project.name}>
+                                    <SidebarMenuItem key={project.id}>
                                         <SidebarMenuButton asChild>
                                             <div onClick={()=>{
-                                                setProjectId(project.id)
+                                                setProjectId?.(project.id)
                                             }}>
                                                 <div className={cn('rounded-sm border size-6 flex items-center justify-center text-sm bg-white text-primary',
                                                     {

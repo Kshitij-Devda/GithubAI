@@ -1,7 +1,7 @@
 'use client'
 
 import useProject from '@/hooks/use-project'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { api } from '@/trpc/react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -11,12 +11,19 @@ import { toast } from 'sonner'
 
 const CommitLog = () => {
     const {projectId, project} = useProject()
-    const {data: commits, refetch} = api.project.getCommits.useQuery({projectId})
+    const {data: commits, refetch} = api.project.getCommits.useQuery({projectId: projectId || ''})
     const [isPolling, setIsPolling] = useState(false)
+    // Add client-side mount state to prevent hydration mismatch
+    const [isMounted, setIsMounted] = useState(false)
     
-    const pollCommits = api.project.pollCommits.useMutation({
-        onSuccess: (data) => {
-            toast.success(`Successfully processed ${data.count} new commits`)
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
+    
+    // Use tRPC's useMutation directly
+    const pollCommitsMutation = api.project.pollCommits.useMutation({
+        onSuccess: () => {
+            toast.success(`Successfully processed new commits`)
             refetch() // Refresh the commits list
             setIsPolling(false)
         },
@@ -33,8 +40,11 @@ const CommitLog = () => {
         }
         
         setIsPolling(true)
-        pollCommits.mutate({projectId})
+        pollCommitsMutation.mutate({projectId})
     }
+    
+    // Determine button disabled state
+    const isButtonDisabled = !isMounted || isPolling || !projectId || pollCommitsMutation.isPending
     
   return (
    <>
@@ -42,11 +52,11 @@ const CommitLog = () => {
      <h2 className="text-xl font-semibold">Commit History</h2>
      <Button 
        onClick={handlePollCommits}
-       disabled={isPolling || !projectId}
+       disabled={isButtonDisabled}
        size="sm"
        variant="outline"
      >
-       {isPolling ? (
+       {(isMounted && (isPolling || pollCommitsMutation.isPending)) ? (
          <>
            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
            Updating...
@@ -60,7 +70,7 @@ const CommitLog = () => {
      </Button>
    </div>
    
-   {commits?.length === 0 && (
+   {isMounted && commits?.length === 0 && (
      <div className="text-center py-8 text-muted-foreground">
        No commits found. Click refresh to fetch commits.
      </div>
